@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 头像提示词生成器 · Portrait Prompt Builder</title>
+<meta name="description" content="只写 3 个词，AI 能画对吗？ Only 3 words: will AI get it right?">
+<link rel="preconnect" href="https://miaoda.feishu.cn" crossorigin>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=ZCOOL+KuaiLe&display=swap">
+<style>
+/* ==========================================================================
+   Portrait Prompt Builder: a photo studio order slip.
+   Written for 375px first; wider screens are added in the media queries.
+   ========================================================================== */
+:root{
+  --paper:#EDEFE7;      /* background */
+  --ink:#16241C;        /* text */
+  --forest:#17513C;     /* selected state, primary button */
+  --stamp:#B23A2E;      /* stamp red: primary button outline, numbers, stamp */
+  --gold:#C9A227;       /* numbers and stamp ring only */
+  --white:#FFFFFF;
+  --sun:#FFD43B;        /* hero band */
+  --go:#2B8A3E;         /* main button */
+  --line:rgba(22,36,28,.28);
+  --muted:rgba(22,36,28,.68);
+  --display:"ZCOOL KuaiLe","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --body:"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus{outline:none}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.wrap{max-width:880px;margin:0 auto;padding:0 16px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- header ---------- */
+header{padding:0}
+.stripe{display:flex;height:10px}
+.stripe i{flex:1}
+header .wrap{padding-top:14px}
+.titlerow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0 18px}
+h1{margin:0;font-family:var(--display);font-weight:400;font-size:34px;line-height:1.15;letter-spacing:.02em}
+h1 .c1{color:#C2255C}h1 .c2{color:#1971C2}h1 .c3{color:#6741D9}h1 .c4{color:#C2410C}
+.br{display:block}
+.sub{margin:4px 0 0;font-size:15px;color:var(--muted);letter-spacing:.04em}
+.stamp{flex:none;width:92px;height:92px;transform:rotate(-8deg);margin-right:2px}
+.stamp text{font-family:var(--display)}
+
+/* ---------- hero strip ---------- */
+.hero{background:var(--sun);border:2px solid var(--ink);border-radius:4px;padding:16px 16px 18px;margin-bottom:4px}
+.hero h2{margin:0 0 6px;font-family:var(--display);font-weight:400;font-size:24px;line-height:1.3}
+.nb{display:inline-block}
+.hero p{margin:0;font-size:16px;color:var(--ink);line-height:1.5}
+
+/* ---------- 8 sections ---------- */
+.sec{margin-top:14px;padding:16px 12px 18px 14px;background:var(--white);border:2px solid var(--c);border-left-width:10px;border-radius:4px}
+.sechead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin:0 0 12px}
+.num{font-family:var(--display);font-size:26px;line-height:1;color:var(--c);padding-bottom:3px;border-bottom:3px solid var(--c)}
+.sectitle{margin:0;font-size:18px;font-weight:700}
+.hint{margin:0;font-size:14px;color:var(--muted);padding:0 2px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:8px}
+.chip{grid-column:span 6;min-height:60px;padding:8px 10px;display:flex;align-items:center;justify-content:center;gap:6px;text-align:center;
+  background:var(--t);border:2px solid var(--c);border-radius:6px;font-size:16px;line-height:1.25}
+.chip .txt{display:flex;flex-direction:column;align-items:center}
+.chip .en{font-size:13px;font-weight:400;color:var(--muted)}
+.chip.own{background:var(--white);border-style:dashed;color:var(--c);font-weight:700}
+.chip.own[aria-pressed="true"]{border-style:solid}
+.chip[aria-pressed="true"] .en{color:rgba(255,255,255,.88)}
+.grid.full .chip[aria-pressed="false"]{border-style:dashed;opacity:.5}
+.chip .tick{display:none;flex:none;width:18px;height:18px}
+.chip[aria-pressed="true"]{background:var(--c);color:var(--white);font-weight:700}
+.chip[aria-pressed="true"] .tick{display:inline-block}
+.chip:hover{background:var(--white)}
+.chip[aria-pressed="true"]:hover{background:var(--c)}
+.chip:active{transform:translateY(1px)}
+
+/* ---------- type-your-own editor ---------- */
+.own-box{margin-top:10px;padding:12px;background:var(--t);border:2px solid var(--c);border-radius:6px}
+.own-box[hidden]{display:none}
+.own-row{display:flex;flex-wrap:wrap;gap:8px}
+.own-row input{flex:1 1 100%;min-width:0;min-height:48px;padding:0 12px;font:inherit;font-size:16px;color:var(--ink);background:var(--white);border:2px solid var(--ink);border-radius:4px}
+.own-row input::placeholder{color:var(--muted)}
+.own-add{flex:1 1 0;min-width:84px;min-height:48px;padding:0 14px;border:2px solid var(--ink);border-radius:4px;background:var(--c);color:var(--white);font-weight:700;line-height:1.15}
+.own-add .en{display:block;font-size:12px;font-weight:400}
+.own-cancel{flex:none;min-width:48px;min-height:48px;padding:0 8px;border:0;background:transparent;color:var(--ink);text-decoration:underline;text-underline-offset:4px;font-size:14px}
+.own-note{margin:8px 0 0;font-size:13px;color:var(--ink);line-height:1.4}
+.own-note .en{display:block;color:var(--muted)}
+.own-err{margin:6px 0 0;font-size:14px;font-weight:700;color:var(--stamp)}
+
+/* ---------- progress: 3 dots ---------- */
+.progress{padding:18px 0 4px;min-height:96px}
+.dots{display:flex;gap:10px;margin:0 0 8px}
+.dots i{display:block;width:18px;height:18px;border-radius:50%;border:2px solid var(--ink);background:var(--white)}
+.dots i:nth-child(1).on{background:#C2255C;border-color:#C2255C}
+.dots i:nth-child(2).on{background:#1971C2;border-color:#1971C2}
+.dots i:nth-child(3).on{background:#2B8A3E;border-color:#2B8A3E}
+.remind{margin:0;font-weight:700;font-size:18px;line-height:1.35}
+.remind .en{display:block;font-size:14px;font-weight:400;color:var(--muted)}
+
+/* ---------- preview: the slip's bottom strip ---------- */
+.slip{margin-top:8px;border-top:2px dashed var(--ink);padding-top:14px}
+.slip h3{margin:0 0 8px;font-size:18px}
+main.wrap{padding-bottom:0}
+#out{margin:0;padding:14px;background:var(--white);border:2px solid var(--ink);border-radius:4px;font-family:var(--mono);font-size:15px;line-height:1.95;
+  white-space:pre-wrap;overflow-wrap:anywhere;overflow-x:auto;text-align:left;min-height:240px}
+#out p{margin:0}
+#out p + p{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+#out.empty{color:var(--muted);font-family:var(--body);font-size:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.6}
+#out .en{font-size:14px}
+#out b{font-weight:700;padding:1px 4px;border-radius:3px;color:var(--c);background:var(--t)}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;width:calc(100% - 32px);max-width:420px;padding:10px 14px;
+  background:var(--ink);color:var(--paper);border-radius:4px;font-weight:700;font-size:15px;line-height:1.4;text-align:center;opacity:0;pointer-events:none}
+.toast.show{opacity:1}
+.toast .en{display:block;font-weight:400;font-size:13px;opacity:.92}
+
+/* ---------- action bar (sticky on phones) ---------- */
+.bar{position:sticky;bottom:0;z-index:5;margin:12px -16px 0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--paper);border-top:1px solid var(--ink)}
+.actions{display:flex;align-items:center;gap:8px}
+.btn{min-height:56px;padding:4px 10px;border-radius:4px;font-weight:700;font-size:16px;line-height:1.2;display:inline-flex;flex-direction:column;align-items:center;justify-content:center}
+.btn .en{font-size:12px;font-weight:400;opacity:.9}
+.btn.primary{flex:1.2 1 0;background:var(--go);color:var(--white);border:2px solid var(--ink)}
+.btn.primary .row{display:inline-flex;align-items:center;gap:6px}
+.btn.primary .ok{display:none;width:16px;height:16px}
+.btn.primary.done .ok{display:inline-block}
+.btn.primary.ready{box-shadow:0 0 0 4px rgba(43,138,62,.4)}
+.btn.second{flex:1 1 0;background:var(--sun);border:2px solid var(--ink)}
+.btn.text{flex:none;min-width:56px;border:0;background:transparent}
+.btn.text .zh{text-decoration:underline;text-underline-offset:4px}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:translateY(1px)}
+
+@media (min-width:500px){
+  .chip{grid-column:span 4}
+  h1{font-size:40px}
+  .stamp{width:112px;height:112px}
+}
+@media (min-width:768px){
+  .br{display:inline}
+  .wrap{padding:0 24px}
+  header{padding-top:16px}
+  .titlerow{padding:10px 0 24px}
+  h1{font-size:50px}
+  .sub{font-size:17px}
+  .stamp{width:140px;height:140px}
+  .hero{padding:22px 24px 24px}
+  .hero h2{font-size:34px}
+  .hero p{font-size:18px;max-width:720px}
+  .sec{margin-top:18px;padding:22px 22px 26px 24px}
+  .sechead{margin-bottom:14px}
+  .own-row input{font-size:17px}
+  .num{font-size:30px}
+  .sectitle{font-size:20px}
+  .grid{gap:10px}
+  .chip{grid-column:span 3;min-height:64px;font-size:17px}
+  #out{font-size:16px;padding:18px 20px}
+  .bar{position:static;margin:14px 0 0;padding:0 0 40px;border-top:0;background:transparent}
+  .btn.primary{flex:0 1 240px}
+  .btn.second{flex:0 1 220px}
+  .toast{bottom:28px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .chip{transition:background-color .12s,color .12s}
+  @keyframes flash{0%{box-shadow:0 0 0 0 var(--forest)}40%{box-shadow:0 0 0 4px var(--forest)}100%{box-shadow:0 0 0 0 var(--forest)}}
+  #out.flash{animation:flash .7s ease-out 1}
+  @keyframes nope{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+  .grid.nope{animation:nope .3s ease-in-out 1}
+  @keyframes breathe{0%,100%{box-shadow:0 0 0 0 rgba(43,138,62,.6)}50%{box-shadow:0 0 0 9px rgba(43,138,62,0)}}
+  .btn.primary.ready{animation:breathe 1.8s ease-in-out infinite}
+  .toast{transition:opacity .2s}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+@media print{.bar,.toast{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="stripe" aria-hidden="true"><i style="background:#C2255C"></i><i style="background:#1971C2"></i><i style="background:#6741D9"></i><i style="background:#C2410C"></i><i style="background:#087F5B"></i><i style="background:#A16207"></i><i style="background:#0B7285"></i><i style="background:#9C36B5"></i></div>
+  <div class="wrap">
+    <div class="titlerow">
+      <div>
+        <h1><span class="c1">AI</span> <span class="c2">头像</span><span class="br"></span><span class="c3">提示词</span><span class="c4">生成器</span></h1>
+        <p class="sub">Portrait Prompt Builder</p>
+      </div>
+      <svg class="stamp" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+        <circle cx="60" cy="60" r="57" fill="none" stroke="#B23A2E" stroke-width="3"/>
+        <circle cx="60" cy="60" r="51" fill="none" stroke="#C9A227" stroke-width="2"/>
+        <path id="stamp-arc" d="M 20 60 A 40 40 0 0 1 100 60" fill="none"/>
+        <text font-size="9.5" font-weight="700" fill="#B23A2E" letter-spacing=".8"><textPath href="#stamp-arc" startOffset="50%" text-anchor="middle">PORTRAIT STUDIO</textPath></text>
+        <circle cx="24" cy="88" r="2" fill="#C9A227"/><circle cx="96" cy="88" r="2" fill="#C9A227"/>
+        <g font-size="13" fill="#B23A2E" text-anchor="middle">
+          <text x="60" y="41">头</text><text x="60" y="55">像</text><text x="60" y="69">照</text><text x="60" y="83">相</text><text x="60" y="97">馆</text>
+        </g>
+      </svg>
+    </div>
+    <div class="hero">
+      <h2><span class="nb">只写 3 个词，AI 能画对吗？</span><span class="nb">看看谁最像自己！</span></h2>
+      <p lang="en">Only 3 words — will AI get it right? See who looks like themselves!</p>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <div id="sections"></div>
+
+  <div class="progress" aria-live="polite">
+    <div class="dots" id="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="remind" id="remind"></p>
+  </div>
+
+  <section class="slip" aria-labelledby="slip-h">
+    <h3 id="slip-h">提示词 / Prompt</h3>
+    <div id="out" tabindex="0"></div>
+  </section>
+
+  <div class="bar">
+    <div class="actions">
+      <button type="button" class="btn primary" id="btn-copy"><span class="row"><svg class="ok" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg><span class="zh" id="copy-zh">复制提示词</span></span><span class="en" lang="en" id="copy-en">Copy prompt</span></button>
+      <button type="button" class="btn second" id="btn-random"><span class="zh">随机抽 3 个</span><span class="en" lang="en">Surprise me</span></button>
+      <button type="button" class="btn text" id="btn-reset"><span class="zh">清空</span><span class="en" lang="en">Reset</span></button>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript><div class="wrap"><p>这个页面需要 JavaScript。 This page needs JavaScript.</p></div></noscript>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ======================= DATA (as supplied) =======================
+     [button zh, button en, prompt zh, prompt en]                          */
+  var SECTIONS = [
+    {id:"age", n:"01", zh:"年龄", en:"Age", max:1, opts:[
+      ["9","9","9 岁","9 years old"],["10","10","10 岁","10 years old"],["11","11","11 岁","11 years old"],["12","12","12 岁","12 years old"],
+      ["13","13","13 岁","13 years old"],["14","14","14 岁","14 years old"],["15","15","15 岁","15 years old"]]},
+    {id:"gender", n:"02", zh:"性别", en:"Gender", max:1, opts:[
+      ["男生","Boy","男生","boy"],["女生","Girl","女生","girl"]]},
+    {id:"hair", n:"03", zh:"发型", en:"Hair", max:1, opts:[
+      ["短发","Short hair","短发","short hair"],
+      ["齐刘海短发","Short hair with bangs","齐刘海短发","short hair with bangs"],
+      ["长直发","Long straight hair","长直发","long straight hair"],
+      ["高马尾","High ponytail","高马尾","hair in a high ponytail"],
+      ["双辫子","Two braids","双辫子","two braids"],
+      ["卷发","Curly hair","卷发","curly hair"],
+      ["蘑菇头","Bowl cut","蘑菇头","a bowl cut"],
+      ["长发扎起来","Long hair tied back","长发扎起来","long hair tied back"]]},
+    {id:"face", n:"04", zh:"脸部特征", en:"Face", max:2, opts:[
+      ["圆脸","Round face","圆脸","a round face"],
+      ["鹅蛋脸","Oval face","鹅蛋脸","an oval face"],
+      ["瘦长脸","Slim face","瘦长脸","a slim face"],
+      ["有小雀斑","Light freckles","有一点小雀斑","light freckles"],
+      ["有小酒窝","Dimples","笑起来有小酒窝","dimples"],
+      ["单眼皮","Monolid eyes","单眼皮","monolid eyes"],
+      ["大眼睛","Big eyes","眼睛比较大","big eyes"],
+      ["小麦色皮肤","Tan skin","皮肤偏小麦色","tan skin"]]},
+    {id:"acc", n:"05", zh:"配饰", en:"Accessories", max:1, opts:[
+      ["不戴配饰","No accessories","不戴配饰","no accessories"],
+      ["圆框眼镜","Round glasses","戴圆框眼镜","round glasses"],
+      ["方框眼镜","Square glasses","戴方框眼镜","square-frame glasses"],
+      ["棒球帽","Baseball cap","戴着棒球帽","a baseball cap"],
+      ["发带","Headband","戴着发带","a headband"],
+      ["耳机挂脖上","Headphones around neck","脖子上挂着耳机","headphones around the neck"],
+      ["牙套","Braces","戴牙套","braces"]]},
+    {id:"exp", n:"06", zh:"表情", en:"Expression", max:1, opts:[
+      ["微笑","Gentle smile","微笑","a gentle smile"],
+      ["大笑露齿","Big smile","大笑，露出牙齿","a big open smile with teeth"],
+      ["抿嘴笑","Closed smile","抿嘴笑","a closed-mouth smile"],
+      ["表情平静","Neutral","表情平静","a neutral expression"],
+      ["有点酷","Cool look","表情有点酷，不太笑","a cool, unsmiling look"],
+      ["眼睛弯弯","Smiling eyes","眼睛弯弯的，像在笑","eyes crinkled in a smile"]]},
+    {id:"cloth", n:"07", zh:"穿着", en:"Clothing", max:1, opts:[
+      ["白色 T 恤","White T-shirt","白色 T 恤","a white T-shirt"],
+      ["黄色卫衣","Yellow hoodie","黄色卫衣","a yellow hoodie"],
+      ["深蓝毛衣","Navy sweater","深蓝毛衣","a navy sweater"],
+      ["校服衬衫","Uniform shirt","校服衬衫","a school uniform shirt"],
+      ["牛仔外套","Denim jacket","牛仔外套","a denim jacket"],
+      ["运动外套","Track jacket","运动外套","a track jacket"]]},
+    {id:"bg", n:"08", zh:"背景", en:"Background", max:1, opts:[
+      ["浅灰","Light grey","浅灰","light grey"],
+      ["米白","Off-white","米白","off-white"],
+      ["浅蓝","Light blue","浅蓝","light blue"],
+      ["淡绿","Pale green","淡绿","pale green"],
+      ["暖黄","Warm yellow","暖黄","warm yellow"],
+      ["深灰","Dark grey","深灰","dark grey"]]}
+  ];
+
+  var MAX = 3;                           // at most 3 words across ALL sections
+  var COLORS = [["#C2255C",194,37,92],["#1971C2",25,113,194],["#6741D9",103,65,217],["#C2410C",194,65,12],["#087F5B",8,127,91],["#A16207",161,98,7],["#0B7285",11,114,133],["#9C36B5",156,54,181]];
+  function tint(c){ return "rgba(" + c[1] + "," + c[2] + "," + c[3] + ",.10)"; }
+  function $(id){ return document.getElementById(id); }
+
+  /* ======================= STATE: the picks, in the order they were made =======================
+     a pick is {s: section index, i: option index}  or  {s: section index, own: "word typed by the student"} */
+  var picks = [];
+  function isSel(si, i){ for (var k = 0; k < picks.length; k++) if (picks[k].s === si && picks[k].i === i) return true; return false; }
+  function ownOf(si){ for (var k = 0; k < picks.length; k++) if (picks[k].s === si && picks[k].own) return picks[k]; return null; }
+  function countIn(si){ var n = 0; picks.forEach(function(p){ if (p.s === si) n++; }); return n; }
+  function drop(si, i){ picks = picks.filter(function(p){ return !(p.s === si && p.i === i); }); }
+
+  /* ======================= BUILD THE 8 SECTIONS ======================= */
+  var SVG_TICK = '<svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg>';
+  var host = $("sections");
+  SECTIONS.forEach(function(s, si){
+    var col = COLORS[si];
+    var sec = document.createElement("section");
+    sec.className = "sec"; sec.setAttribute("aria-labelledby", "t-" + s.id);
+    sec.style.setProperty("--c", col[0]); sec.style.setProperty("--t", tint(col));
+    var head = document.createElement("div"); head.className = "sechead";
+    head.innerHTML = '<span class="num" aria-hidden="true">' + s.n + '</span><h2 class="sectitle" id="t-' + s.id + '">' + s.zh + " / " + s.en + "</h2>";
+    if (s.max > 1){
+      var h = document.createElement("p"); h.className = "hint"; h.innerHTML = '最多选 2 项 <span lang="en">/ up to 2</span>';
+      head.appendChild(h);
+    }
+    sec.appendChild(head);
+    var grid = document.createElement("div"); grid.className = "grid"; grid.id = "grid-" + s.id; grid.setAttribute("role", "group"); grid.setAttribute("aria-labelledby", "t-" + s.id);
+    s.opts.forEach(function(o, i){
+      var b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.id = s.id + "-" + i;
+      b.setAttribute("aria-pressed", "false");
+      var same = o[0] === o[1];                                   // ages: just the number
+      b.innerHTML = SVG_TICK + '<span class="txt"><span class="zh"></span>' + (same ? "" : '<span class="en" lang="en"></span>') + "</span>";
+      b.querySelector(".zh").textContent = o[0];
+      if (!same) b.querySelector(".en").textContent = o[1];
+      b.addEventListener("click", function(){ toggle(si, i); });
+      grid.appendChild(b);
+    });
+    /* the last chip lets a student write their own word */
+    var own = document.createElement("button"); own.type = "button"; own.className = "chip own"; own.id = s.id + "-own"; own.setAttribute("aria-pressed", "false");
+    own.setAttribute("aria-controls", "box-" + s.id); own.setAttribute("aria-expanded", "false");
+    own.innerHTML = SVG_TICK + '<span class="txt"><span class="zh"></span><span class="en" lang="en"></span></span>';
+    own.addEventListener("click", function(){ toggleOwn(si); });
+    grid.appendChild(own);
+    sec.appendChild(grid);
+
+    var box = document.createElement("div"); box.className = "own-box"; box.id = "box-" + s.id; box.hidden = true;
+    box.innerHTML = '<div class="own-row"><input type="text" id="inp-' + s.id + '" maxlength="' + (s.id === "age" ? 2 : 24) + '" autocomplete="off" autocapitalize="off" spellcheck="false"' + (s.id === "age" ? ' inputmode="numeric"' : "") +
+      ' aria-label="' + s.zh + ' / ' + s.en + '：自己写 / write your own" placeholder="' + (s.id === "age" ? "年龄数字 / Age number" : "输入你的词 / Type your word") + '">' +
+      '<button type="button" class="own-add" id="add-' + s.id + '">加入<span class="en" lang="en">Add</span></button>' +
+      '<button type="button" class="own-cancel" id="cancel-' + s.id + '">取消<span lang="en"> / Cancel</span></button></div>' +
+      '<p class="own-note">写外貌的词就好，别写名字和学校哦。<span class="en" lang="en">Describe looks only: no names or schools.</span></p><p class="own-err" id="err-' + s.id + '" role="alert"></p>';
+    sec.appendChild(box);
+    host.appendChild(sec);
+
+    var inp = box.querySelector("input");
+    $("add-" + s.id).addEventListener("click", function(){ commitOwn(si); });
+    $("cancel-" + s.id).addEventListener("click", function(){ closeOwn(si); $(s.id + "-own").focus(); });
+    inp.addEventListener("keydown", function(e){
+      if (e.key === "Enter"){ e.preventDefault(); commitOwn(si); }
+      else if (e.key === "Escape"){ closeOwn(si); $(s.id + "-own").focus(); }
+    });
+    inp.addEventListener("input", function(){
+      if (s.id === "age") inp.value = inp.value.replace(/\D/g, "");
+      $("err-" + s.id).textContent = "";
+    });
+  });
+
+  /* 12-column grid: a full row is span 6 / 4 / 3 (2, 3 or 4 chips per row); the last, shorter row is stretched to fill. */
+  function colsNow(){
+    if (window.matchMedia("(min-width:768px)").matches) return 4;
+    if (window.matchMedia("(min-width:500px)").matches) return 3;
+    return 2;
+  }
+  function layoutGrids(){
+    var cols = colsNow();
+    SECTIONS.forEach(function(s){
+      var kids = $("grid-" + s.id).children, n = kids.length, rem = n % cols, start = n - rem;
+      for (var i = 0; i < n; i++) kids[i].style.gridColumn = (rem && i >= start) ? "span " + (12 / rem) : "";
+    });
+  }
+  [window.matchMedia("(min-width:500px)"), window.matchMedia("(min-width:768px)")].forEach(function(m){
+    if (m.addEventListener) m.addEventListener("change", layoutGrids); else if (m.addListener) m.addListener(layoutGrids);
+  });
+  window.addEventListener("resize", layoutGrids);
+
+  /* ======================= TOAST (Chinese and English on the same face) ======================= */
+  var toastTimer = null;
+  function toast(zh, en, ms){
+    var t = $("toast"); t.textContent = "";
+    var a = document.createElement("span"); a.textContent = zh;
+    var b = document.createElement("span"); b.className = "en"; b.lang = "en"; b.textContent = en;
+    t.appendChild(a); t.appendChild(b); t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.classList.remove("show"); }, ms || 2800);
+  }
+  function shake(el){ el.classList.remove("nope"); void el.offsetWidth; el.classList.add("nope"); }
+
+  /* ======================= SELECTING (3 words in total) ======================= */
+  // returns true if a new word may be added to section si (otherwise it has already told the student why)
+  function canAdd(si){
+    var s = SECTIONS[si];
+    if (picks.length >= MAX){
+      toast("只能选 3 个哦，先取消一个再换。", "Only 3 picks — tap one to deselect first.");
+      shake($("grid-" + s.id)); return false;
+    }
+    if (s.max > 1 && countIn(si) >= s.max){
+      toast("脸部特征最多选 2 个哦。", "Face: only 2 picks."); shake($("grid-" + s.id)); return false;
+    }
+    return true;
+  }
+  function makeRoom(si){ if (SECTIONS[si].max === 1) picks = picks.filter(function(p){ return p.s !== si; }); }
+
+  function toggle(si, i){
+    if (isSel(si, i)){ drop(si, i); refresh(false); return; }        // tap again to remove
+    if (!canAdd(si)) return;
+    makeRoom(si);                                                    // single-choice section: swap
+    picks.push({s: si, i: i});
+    closeOwn(si); refresh(false);
+  }
+
+  /* ----- write your own word ----- */
+  function openOwn(si){
+    SECTIONS.forEach(function(_, k){ if (k !== si) closeOwn(k); });
+    var s = SECTIONS[si], box = $("box-" + s.id); box.hidden = false; $(s.id + "-own").setAttribute("aria-expanded", "true");
+    var inp = $("inp-" + s.id); inp.value = ""; $("err-" + s.id).textContent = ""; inp.focus();
+    if (box.scrollIntoView) box.scrollIntoView({block: "nearest", behavior: "smooth"});
+  }
+  function closeOwn(si){
+    var s = SECTIONS[si]; $("box-" + s.id).hidden = true; $(s.id + "-own").setAttribute("aria-expanded", "false");
+  }
+  function toggleOwn(si){
+    var existing = ownOf(si);
+    if (existing){ picks = picks.filter(function(p){ return p !== existing; }); closeOwn(si); refresh(false); return; }
+    if (!$("box-" + SECTIONS[si].id).hidden){ closeOwn(si); return; }
+    if (!canAdd(si)) return;
+    openOwn(si);
+  }
+  function cleanWord(t){ return String(t || "").replace(/[\u0000-\u001F\u007F<>]/g, "").replace(/\s+/g, " ").trim(); }
+  function commitOwn(si){
+    var s = SECTIONS[si], inp = $("inp-" + s.id), w = cleanWord(inp.value);
+    if (!w){ $("err-" + s.id).textContent = "先写一个词哦。 / Type a word first."; inp.focus(); return; }
+    if (!canAdd(si)) return;
+    makeRoom(si);
+    picks.push({s: si, own: w});
+    closeOwn(si); refresh(false);
+  }
+
+  /* ======================= THE PROMPT (minimal template) ======================= */
+  var M1 = "\u0001", M2 = "\u0002";                                   // markers around the picked words (highlighting only); the char after M1 is the section index
+  function mark(si, t){ return M1 + String(si) + t + M2; }
+  function build(){
+    var age = null, gender = null, zhChips = [], enChips = [];
+    picks.forEach(function(p){
+      var s = SECTIONS[p.s], o = p.own ? [p.own, p.own, p.own, p.own] : s.opts[p.i];
+      if (s.id === "age") age = {o: o, s: p.s, num: /^\d{1,2}$/.test(o[0])};
+      else if (s.id === "gender") gender = {o: o, s: p.s};
+      else if (s.id === "bg"){ zhChips.push(mark(p.s, o[2] + "背景")); enChips.push(mark(p.s, o[3] + " background")); }
+      else { zhChips.push(mark(p.s, o[2])); enChips.push(mark(p.s, o[3])); }
+    });
+    var zhWho = "一个" + (age ? mark(age.s, age.o[0] + (age.num ? "岁" : "")) : "") + (gender ? mark(gender.s, gender.o[2]) : "") + "学生";
+    var enAgeTxt = age ? (age.num ? ((age.o[0] === "11" || age.o[0] === "8" || age.o[0] === "18" ? "an " : "a ") + age.o[0] + "-year-old") : "a " + age.o[0]) : "a";
+    var enWho = (age ? mark(age.s, enAgeTxt) : enAgeTxt) + (gender ? " " + mark(gender.s, gender.o[3]) : "") + " student";
+    var zh = "画一张写实头像：" + zhWho + zhChips.map(function(c){ return "，" + c; }).join("") + "。正方形 1:1，正面，纯色背景，真实照片风格。";
+    var en = "Draw a realistic portrait: " + enWho + enChips.map(function(c){ return ", " + c; }).join("") + ". Square 1:1, front view, plain background, real photo style.";
+    return {zh: zh, en: en};
+  }
+  function plain(s){ return s.replace(/\u0001./g, "").split(M2).join(""); }
+  function promptText(){ var b = build(); return plain(b.zh) + "\n\n" + plain(b.en); }
+
+  function fillMarked(el, s){
+    s.split(M1).forEach(function(chunk, k){
+      if (k === 0){ el.appendChild(document.createTextNode(chunk)); return; }
+      var si = parseInt(chunk.charAt(0), 10), two = chunk.slice(1).split(M2), bold = document.createElement("b");
+      bold.style.setProperty("--c", COLORS[si][0]); bold.style.setProperty("--t", tint(COLORS[si])); bold.textContent = two[0]; el.appendChild(bold);
+      el.appendChild(document.createTextNode(two[1]));
+    });
+  }
+  function renderPreview(){
+    var out = $("out"); out.textContent = "";
+    if (!picks.length){
+      out.className = "empty"; out.removeAttribute("tabindex");
+      var a = document.createElement("span"); a.textContent = "先选 3 个词，这里就会长出一段提示词。";
+      var b = document.createElement("span"); b.className = "en"; b.lang = "en"; b.textContent = "Pick 3 words and your prompt will appear here.";
+      out.appendChild(a); out.appendChild(b); return;
+    }
+    out.className = ""; out.setAttribute("tabindex", "0");
+    var t = build(), pz = document.createElement("p"), pe = document.createElement("p"); pe.lang = "en";
+    fillMarked(pz, t.zh); fillMarked(pe, t.en); out.appendChild(pz); out.appendChild(pe);
+  }
+
+  /* ======================= RENDER ======================= */
+  function refresh(flash){
+    SECTIONS.forEach(function(s, si){
+      s.opts.forEach(function(o, i){ $(s.id + "-" + i).setAttribute("aria-pressed", isSel(si, i) ? "true" : "false"); });
+      var own = ownOf(si), chip = $(s.id + "-own");
+      chip.setAttribute("aria-pressed", own ? "true" : "false");
+      chip.querySelector(".zh").textContent = own ? own.own : "自己写";
+      chip.querySelector(".en").textContent = own ? "my own word" : "Write my own";
+      $("grid-" + s.id).classList.toggle("full", picks.length >= MAX);
+    });
+    var n = picks.length, dots = $("dots").children;
+    for (var k = 0; k < dots.length; k++) dots[k].className = k < n ? "on" : "";
+    var r = $("remind"); r.textContent = "";
+    var zh = document.createElement("span"), en = document.createElement("span"); en.className = "en"; en.lang = "en";
+    if (n < MAX){ zh.textContent = "再选 " + (MAX - n) + " 个词就可以复制啦"; en.textContent = (MAX - n) + " more to pick"; }
+    else { zh.textContent = "就它，去生成！"; en.textContent = "That's the one — go generate!"; }
+    r.appendChild(zh); r.appendChild(en);
+    $("btn-copy").classList.toggle("ready", n >= MAX);
+    renderPreview();
+    if (flash){ var o = $("out"); o.classList.remove("flash"); void o.offsetWidth; o.classList.add("flash"); }
+  }
+
+  /* ======================= COPY (clipboard API, then textarea, then select the text) ======================= */
+  var copyTimer = null;
+  function copyViaTextarea(text){
+    try{
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.setAttribute("aria-hidden", "true"); ta.tabIndex = -1;
+      ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0";
+      document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+      var ok = document.execCommand && document.execCommand("copy");
+      document.body.removeChild(ta);
+      return !!ok;
+    }catch(e){ return false; }
+  }
+  function selectPreview(){
+    try{ var r = document.createRange(); r.selectNodeContents($("out")); var sl = window.getSelection(); sl.removeAllRanges(); sl.addRange(r); }catch(e){}
+  }
+  function copyDone(){
+    var b = $("btn-copy"); b.classList.add("done"); $("copy-zh").textContent = "已复制"; $("copy-en").textContent = "Copied";
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(function(){ b.classList.remove("done"); $("copy-zh").textContent = "复制提示词"; $("copy-en").textContent = "Copy prompt"; }, 2000);
+    toast("已复制，去 AI 绘图工具里粘贴吧。", "Copied. Paste it into an AI image tool.");
+  }
+  $("btn-copy").addEventListener("click", function(){
+    if (!picks.length){ toast("还没选任何词，先选几个再复制吧。", "Nothing picked yet. Pick a few words, then copy."); return; }
+    var text = promptText();                                           // fewer than 3 picks may still be copied (on purpose)
+    function fallback(){
+      if (copyViaTextarea(text)){ copyDone(); return; }
+      selectPreview(); toast("已选中，请按 Ctrl+C / ⌘C", "Selected — press Ctrl+C / ⌘C", 6000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      var p; try{ p = navigator.clipboard.writeText(text); }catch(e){ fallback(); return; }
+      if (p && p.then) p.then(copyDone, fallback); else copyDone();
+    } else { fallback(); }
+  });
+
+  /* ======================= SURPRISE ME (fills all 3) + RESET ======================= */
+  function closeAllOwn(){ SECTIONS.forEach(function(_, k){ closeOwn(k); }); }
+  $("btn-random").addEventListener("click", function(){
+    var all = [];
+    SECTIONS.forEach(function(s, si){ s.opts.forEach(function(o, i){ all.push({s: si, i: i}); }); });
+    for (var k = all.length - 1; k > 0; k--){ var j = Math.floor(Math.random() * (k + 1)), t = all[k]; all[k] = all[j]; all[j] = t; }
+    picks = [];
+    all.forEach(function(c){
+      if (picks.length >= MAX) return;
+      if (countIn(c.s) >= SECTIONS[c.s].max) return;                   // keep the one-per-section rules
+      picks.push(c);
+    });
+    closeAllOwn(); refresh(true); toast("随机抽好了 3 个，可以再改。", "3 random picks are ready. You can still change them.");
+  });
+  $("btn-reset").addEventListener("click", function(){
+    picks = []; closeAllOwn(); refresh(false); toast("已清空。", "Cleared.", 1800);
+  });
+
+  layoutGrids();
+  refresh(false);
+})();
+</script>
+</body>
+</html>
